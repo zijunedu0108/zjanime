@@ -174,8 +174,18 @@
             padding: 40px;
             color: #aaa;
         }
+        .debug-info {
+            font-size: 12px;
+            color: #ff9a5a;
+            text-align: center;
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            word-break: break-all;
+        }
 
-        /* 全屏播放器 - YouTube风格 */
+        /* 全屏播放器 */
         #player-modal {
             position: fixed;
             top: 0;
@@ -197,10 +207,21 @@
             position: relative;
             width: 100%;
             background: #000;
+            min-height: 60vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .video-wrapper iframe {
+        .video-wrapper .telegram-widget {
             width: 100%;
-            height: 100vh;
+            max-width: 100%;
+            min-height: 400px;
+            display: flex;
+            justify-content: center;
+        }
+        .video-wrapper .telegram-widget iframe {
+            width: 100%;
+            min-height: 400px;
             border: none;
         }
         .player-controls {
@@ -374,7 +395,6 @@
             cursor: pointer;
         }
 
-        /* 自定义弹窗 */
         .custom-dialog {
             position: fixed;
             top: 0;
@@ -492,6 +512,8 @@
             margin-top: 4px;
         }
     </style>
+    <!-- Telegram Widget 脚本 -->
+    <script async src="https://telegram.org/js/telegram-widget.js?23"></script>
 </head>
 <body>
 
@@ -508,6 +530,7 @@
     </div>
     <div class="search-bar"><span>🔍</span><input type="text" id="search-input" placeholder="搜索动漫..."></div>
     <div class="anime-grid" id="anime-grid"><div class="loading-text">加载动漫库中...</div></div>
+    <div class="debug-info" id="debug-info"></div>
 </div>
 
 <div id="page-sign" class="page">
@@ -540,7 +563,7 @@
 <div id="player-modal" style="display:none;">
     <div class="player-container">
         <div class="video-wrapper">
-            <iframe id="anime-player" src="" allowfullscreen allow="autoplay; fullscreen"></iframe>
+            <div id="player-container" style="width:100%;"></div>
             <div class="player-controls"><div class="close-player-btn" id="close-player">✕</div></div>
         </div>
         <div class="player-info-panel">
@@ -561,6 +584,10 @@
 </div>
 
 <script>
+    // ==================== 配置 ====================
+    const GITHUB_OWNER = "zijunedu0108";
+    const GITHUB_REPO = "zjanime";
+    
     // ==================== 自定义弹窗 ====================
     function showCustomDialog(title, message, onConfirm, onCancel) {
         const dialog = document.createElement('div');
@@ -597,7 +624,6 @@
     })();
 
     // ==================== 动漫数据 ====================
-    let currentAnimeList = [];
     let episodeUrls = [];
     let currentUser = null;
     let userPoints = 0;
@@ -614,57 +640,177 @@
         }); 
     }
 
-    // 从 GitHub Issues 获取动漫数据 - 硬编码确保有显示
-    const FALLBACK_ANIME = [{
-        title: "鬼灭之刃 第一季",
-        poster: "https://github.com/user-attachments/assets/c863c3e3-35fb-4474-959f-4aab39055c86",
-        episodes: ["https://www.youtube.com/watch?v=K8ngtohhDo4", "https://www.youtube.com/watch?v=calfzpISFWQ"],
-        description: "这是一个非常好看的动漫，讲述少年炭治郎的成长故事。"
-    }];
+    // 从 Telegram URL 提取频道和消息ID
+    function parseTelegramUrl(url) {
+        // 匹配格式: https://t.me/频道名/消息ID
+        const match = url.match(/t\.me\/([^\/]+)\/(\d+)/);
+        if (match) {
+            return { channel: match[1], postId: match[2] };
+        }
+        return null;
+    }
 
-    const FALLBACK_ANNOUNCEMENTS = [{ title: "欢迎来到Animix", body: "每日签到获取积分，一起看番发弹幕~" }];
+    // 使用 Telegram Widget 渲染视频
+    function renderTelegramWidget(channel, postId, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        // 清除容器内容
+        container.innerHTML = '';
+        
+        // 创建 Telegram Widget 容器
+        const widgetDiv = document.createElement('div');
+        widgetDiv.className = 'telegram-widget';
+        widgetDiv.setAttribute('data-telegram-post', `${channel}/${postId}`);
+        widgetDiv.setAttribute('data-width', '100%');
+        
+        container.appendChild(widgetDiv);
+        
+        // 如果 Telegram Widget 已加载，手动初始化
+        if (window.Telegram && window.Telegram.getWidgetInfo) {
+            // 等待一下让 DOM 更新
+            setTimeout(() => {
+                const scriptWidgets = document.querySelectorAll('.telegram-widget');
+                for (let i = 0; i < scriptWidgets.length; i++) {
+                    if (window.initWidget) {
+                        window.initWidget(scriptWidgets[i]);
+                    }
+                }
+            }, 100);
+        }
+    }
 
+    // 在播放器中渲染内容
+    function renderPlayerContent(url, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        // YouTube 处理
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            let embedUrl = url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+            if (!embedUrl.includes('?')) embedUrl += '?modestbranding=1&rel=0';
+            container.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; fullscreen" style="width:100%; height:100%; min-height:60vh; border:none;"></iframe>`;
+            return;
+        }
+        
+        // 直接视频文件
+        if (url.match(/\.(mp4|webm|mov)$/i)) {
+            container.innerHTML = `<video controls autoplay playsinline style="width:100%; max-height:70vh;"><source src="${url}" type="video/mp4"></video>`;
+            return;
+        }
+        
+        // Telegram 链接 - 使用官方 Widget
+        const tgInfo = parseTelegramUrl(url);
+        if (tgInfo) {
+            renderTelegramWidget(tgInfo.channel, tgInfo.postId, containerId);
+            return;
+        }
+        
+        // 其他链接
+        container.innerHTML = `
+            <div class="video-placeholder">
+                <p>⚠️ 无法播放此视频</p>
+                <a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#ff7b89;">点击在新窗口打开</a>
+            </div>
+        `;
+    }
+
+    // 从 GitHub Issues 获取动漫数据
     async function fetchAnimeFromGitHubIssues() {
+        const debugDiv = document.getElementById("debug-info");
+        const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?labels=anime&state=open&per_page=50`;
+        
+        debugDiv.innerHTML = `🔍 请求地址: ${apiUrl}<br>⏳ 正在加载...`;
+        
         try {
-            const apiUrl = "https://api.github.com/repos/zijunedu0108/zijunedu0108.github.io/issues?labels=anime&state=open&per_page=50";
             const response = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
-            if (!response.ok) return FALLBACK_ANIME;
+            
+            if (!response.ok) {
+                debugDiv.innerHTML = `❌ API 错误: ${response.status}<br>📍 请确认仓库: ${GITHUB_OWNER}/${GITHUB_REPO}`;
+                return [];
+            }
+            
             const issues = await response.json();
-            if (!issues || issues.length === 0) return FALLBACK_ANIME;
+            debugDiv.innerHTML = `✅ 找到 ${issues.length} 个 issues (label: anime)`;
+            
+            if (!issues || issues.length === 0) {
+                debugDiv.innerHTML += `<br>⚠️ 没有找到 label 为 "anime" 的 issue`;
+                return [];
+            }
+            
             const animes = [];
             for (const issue of issues) {
                 const title = issue.title;
                 const body = issue.body || "";
+                debugDiv.innerHTML += `<br>📺 解析: ${title}`;
+                
+                // 提取图片（只取第一个img标签）
                 const imgMatch = body.match(/<img[^>]+src=["']([^"']+)["']/i);
                 let poster = imgMatch ? imgMatch[1] : "https://placehold.co/194x259";
-                const ytRegex = /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=[a-zA-Z0-9_-]+/g;
-                const episodes = body.match(ytRegex) || [];
+                
+                // 提取视频链接 - 只匹配 t.me 和 youtube 链接，排除图片URL
+                const episodes = [];
+                const lines = body.split('\n');
+                for (const line of lines) {
+                    // 匹配 Telegram 链接: https://t.me/xxx/xxx
+                    const tgMatch = line.match(/https?:\/\/t\.me\/[^\s\/]+\/\d+/);
+                    if (tgMatch) {
+                        episodes.push(tgMatch[0]);
+                        continue;
+                    }
+                    // 匹配 YouTube 链接
+                    const ytMatch = line.match(/https?:\/\/(?:www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[^\s]+/);
+                    if (ytMatch) {
+                        episodes.push(ytMatch[0]);
+                        continue;
+                    }
+                    // 匹配 .mp4 直链
+                    const mp4Match = line.match(/https?:\/\/[^\s]+\.(mp4|webm|mov)/i);
+                    if (mp4Match) {
+                        episodes.push(mp4Match[0]);
+                    }
+                }
+                
                 const descMatch = body.match(/介绍\s*[-:：]\s*([^\n]+)/i);
                 let desc = descMatch ? descMatch[1].trim() : "暂无介绍";
-                if (episodes.length > 0) animes.push({ title, poster, episodes, description: desc });
+                
+                debugDiv.innerHTML += ` - 找到 ${episodes.length} 个视频链接`;
+                
+                if (episodes.length > 0) {
+                    animes.push({ title, poster, episodes, description: desc });
+                }
             }
-            return animes.length > 0 ? animes : FALLBACK_ANIME;
+            
+            if (animes.length === 0) {
+                debugDiv.innerHTML += "<br>⚠️ 没有找到有效的视频链接";
+                return [];
+            }
+            
+            debugDiv.innerHTML += `<br>✅ 共解析出 ${animes.length} 部动漫`;
+            return animes;
+            
         } catch (error) {
-            return FALLBACK_ANIME;
+            debugDiv.innerHTML = `❌ 请求失败: ${error.message}`;
+            return [];
         }
     }
 
     async function getAnnouncements() {
         try {
-            const apiUrl = "https://api.github.com/repos/zijunedu0108/zijunedu0108.github.io/issues?labels=alert&state=open&per_page=10";
+            const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?labels=alert&state=open&per_page=10`;
             const response = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
-            if (!response.ok) return FALLBACK_ANNOUNCEMENTS;
+            if (!response.ok) return [{ title: "欢迎来到Animix", body: "每日签到获取积分~" }];
             const issues = await response.json();
-            if (!issues.length) return FALLBACK_ANNOUNCEMENTS;
+            if (!issues.length) return [{ title: "欢迎来到Animix", body: "每日签到获取积分~" }];
             return issues.map(i => ({ title: i.title, body: (i.body || "").substring(0, 200) }));
         } catch (e) {
-            return FALLBACK_ANNOUNCEMENTS;
+            return [{ title: "欢迎来到Animix", body: "每日签到获取积分~" }];
         }
     }
 
     async function getAvatarList() {
         try {
-            const apiUrl = "https://api.github.com/repos/zijunedu0108/zijunedu0108.github.io/issues?labels=avatar&state=open";
+            const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?labels=avatar&state=open`;
             const response = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
             if (!response.ok) return [];
             const issues = await response.json();
@@ -678,11 +824,22 @@
     async function renderHomePage(search = "") {
         const grid = document.getElementById("anime-grid");
         grid.innerHTML = '<div class="loading-text">加载动漫库中...</div>';
+        
         let animes = await fetchAnimeFromGitHubIssues();
-        currentAnimeList = animes;
+        
+        if (animes.length === 0) {
+            grid.innerHTML = '<div class="empty-text">❌ 没有找到动漫数据<br><br>请检查：<br>1. GitHub 仓库地址是否正确<br>2. Issues 是否有 label "anime"</div>';
+            return;
+        }
+        
         let filtered = animes.filter(a => a.title.toLowerCase().includes(search.toLowerCase()));
-        if (filtered.length === 0) { grid.innerHTML = '<div class="empty-text">没有找到相关动漫</div>'; return; }
+        if (filtered.length === 0) {
+            grid.innerHTML = '<div class="empty-text">没有找到相关动漫</div>';
+            return;
+        }
+        
         grid.innerHTML = filtered.map((ani, idx) => `<div class="anime-card" data-idx="${idx}"><img src="${ani.poster}" loading="lazy" onerror="this.src='https://placehold.co/194x259'"><div class="anime-info"><div class="anime-title">${escapeHtml(ani.title)}</div><div class="anime-ep">${ani.episodes.length}集</div></div></div>`).join("");
+        
         document.querySelectorAll(".anime-card").forEach(card => {
             card.addEventListener("click", () => {
                 let idx = parseInt(card.getAttribute("data-idx"));
@@ -697,19 +854,20 @@
         document.getElementById("player-title").innerText = anime.title;
         document.getElementById("player-poster").src = anime.poster;
         document.getElementById("player-desc").innerText = anime.description;
+        
         const epBtns = document.getElementById("episode-list");
         epBtns.innerHTML = episodeUrls.map((url, i) => `<button class="ep-btn ${i === 0 ? 'active' : ''}" data-epidx="${i}">第${i + 1}集</button>`).join("");
+        
         document.querySelectorAll(".ep-btn").forEach(btn => {
             btn.addEventListener("click", () => {
                 let idx = parseInt(btn.getAttribute("data-epidx"));
-                let embedUrl = episodeUrls[idx].replace("watch?v=", "embed/") + "?modestbranding=1&rel=0";
-                document.getElementById("anime-player").src = embedUrl;
+                renderPlayerContent(episodeUrls[idx], "player-container");
                 document.querySelectorAll(".ep-btn").forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
             });
         });
-        let firstUrl = episodeUrls[0].replace("watch?v=", "embed/") + "?modestbranding=1&rel=0";
-        document.getElementById("anime-player").src = firstUrl;
+        
+        renderPlayerContent(episodeUrls[0], "player-container");
         document.getElementById("player-modal").style.display = "block";
         loadDanmu();
     }
@@ -742,10 +900,10 @@
     document.getElementById("close-player")?.addEventListener("click", () => {
         document.getElementById("player-modal").style.display = "none";
         if (danmuInterval) clearInterval(danmuInterval);
-        document.getElementById("anime-player").src = "";
+        document.getElementById("player-container").innerHTML = "";
     });
 
-    // ==================== 用户系统 (localStorage) ====================
+    // ==================== 用户系统 ====================
     let userData = JSON.parse(localStorage.getItem("animix_user") || '{"points":0,"lastSign":"","name":null,"avatar":"default.png"}');
     userPoints = userData.points;
     
@@ -832,7 +990,7 @@
         }
     }
     
-    // 退出登录 - 自定义弹窗
+    // 退出登录
     document.getElementById("logout-btn")?.addEventListener("click", () => {
         showCustomDialog("退出登录", "确定要退出登录吗？", () => {
             userData.name = null;
@@ -848,11 +1006,11 @@
         window.open("https://docs.google.com/forms/d/e/1FAIpQLScRf0Euxk17tb9dn2muJOgC1ZlAM33pVcOh2jVEwOMzziz_tg/viewform", "_blank");
     });
     
-    // 修改头像 - 从 GitHub issues 选择
+    // 修改头像
     document.getElementById("change-avatar-btn")?.addEventListener("click", async () => {
         const avatars = await getAvatarList();
         if (!avatars.length) { 
-            showToast("暂无可用头像，请先在 GitHub 创建 avatar 标签的 issue，内容格式: <img src='图片URL'>"); 
+            showToast("暂无可用头像，请先在 GitHub 创建 avatar 标签的 issue"); 
             return; 
         }
         const modal = document.createElement("div");
