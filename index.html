@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>Animix - 动漫集结地</title>
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -11,13 +12,26 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background: #0b0b0e;
             color: #ffffff;
+            transition: background 0.3s, color 0.3s;
             padding-bottom: 80px;
         }
+        body.light { background: #f2f2f6; color: #1c1c1e; }
+        body.light .bottom-nav { background: rgba(255,255,255,0.85); border: 0.5px solid rgba(0,0,0,0.1); }
+        body.light .nav-item.active { color: #e65c6b; background: rgba(230,92,107,0.1); }
+        body.light .search-bar { background: rgba(0,0,0,0.05); }
+        body.light .anime-card { background: rgba(255,255,255,0.7); }
+        body.light .chat-messages { background: rgba(0,0,0,0.1); }
+        body.light .chat-input-area input { background: rgba(0,0,0,0.1); color: #1c1c1e; }
+        body.light .ep-btn { background: #e5e5ea; color: #1c1c1e; }
+        body.light .ep-btn.active { background: #ff7b89; color: white; }
+        body.light .modal-card { background: #fff; color: #1c1c1e; }
+        body.light .modal-card input { background: #f0f0f0; color: #1c1c1e; }
+
         .bottom-nav {
             position: fixed;
             bottom: 20px;
@@ -57,59 +71,346 @@
         .search-bar { background: rgba(255,255,255,0.1); border-radius: 30px; padding: 12px 18px; margin-bottom: 20px; display: flex; gap: 8px; }
         .search-bar input { flex: 1; background: transparent; border: none; outline: none; color: inherit; font-size: 16px; }
         .anime-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-        .anime-card { background: rgba(30,30,35,0.6); border-radius: 16px; overflow: hidden; cursor: pointer; }
+        .anime-card { background: rgba(30,30,35,0.6); border-radius: 16px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+        .anime-card:hover { transform: translateY(-4px); }
         .anime-card img { width: 100%; aspect-ratio: 194 / 259; object-fit: cover; }
         .anime-info { padding: 10px; }
         .anime-title { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .anime-ep { font-size: 12px; color: #ff9a5a; }
         .loading-text, .empty-text { text-align: center; padding: 40px; color: #aaa; }
-        
-        #player-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1500; overflow-y: auto; }
-        .player-container { width: 100%; min-height: 100%; background: #000; display: flex; flex-direction: column; }
-        .video-wrapper { position: relative; width: 100%; background: #000; }
-        .video-wrapper iframe { width: 100%; height: 50vh; border: none; }
-        .video-wrapper video { width: 100%; max-height: 50vh; }
-        .danmu-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        .player-controls { position: absolute; top: 10px; right: 15px; z-index: 20; }
-        .close-player-btn { background: rgba(0,0,0,0.6); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; color: white; }
-        .player-info-panel { background: rgba(20,20,25,0.95); padding: 16px; }
-        .episode-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
-        .ep-btn { background: #2c2c2e; border: none; padding: 8px 20px; border-radius: 30px; color: white; font-weight: 500; cursor: pointer; font-size: 14px; }
+        .debug-info { font-size: 12px; color: #ff9a5a; text-align: center; margin-top: 20px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 12px; }
+
+        /* 全屏播放器 */
+        #player-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 1500;
+            overflow-y: auto;
+        }
+        .player-container {
+            width: 100%;
+            min-height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+        }
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .video-wrapper iframe {
+            width: 100%;
+            height: 50vh;
+            border: none;
+        }
+        .video-wrapper video {
+            width: 100%;
+            max-height: 50vh;
+        }
+        /* 全屏模式 */
+        .video-wrapper:fullscreen {
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+        }
+        .video-wrapper:-webkit-full-screen {
+            width: 100vw;
+            height: 100vh;
+        }
+        .video-wrapper:fullscreen iframe,
+        .video-wrapper:-webkit-full-screen iframe {
+            height: 100vh;
+            width: 100vw;
+        }
+        .video-wrapper:fullscreen video,
+        .video-wrapper:-webkit-full-screen video {
+            max-height: 100vh;
+            width: auto;
+            max-width: 100vw;
+        }
+        .danmu-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        /* 全屏时画布跟随 */
+        .video-wrapper:fullscreen .danmu-canvas,
+        .video-wrapper:-webkit-full-screen .danmu-canvas {
+            width: 100vw;
+            height: 100vh;
+        }
+        .player-controls {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            z-index: 20;
+        }
+        .close-player-btn {
+            background: rgba(0,0,0,0.6);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            cursor: pointer;
+            color: white;
+            backdrop-filter: blur(10px);
+            z-index: 30;
+        }
+        .player-info-panel {
+            background: rgba(20,20,25,0.95);
+            padding: 16px;
+            transition: transform 0.3s;
+        }
+        /* 全屏时隐藏下方信息栏（可选） */
+        .video-wrapper:fullscreen ~ .player-info-panel {
+            display: none;
+        }
+        .episode-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 12px 0;
+        }
+        .ep-btn {
+            background: #2c2c2e;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 14px;
+        }
         .ep-btn.active { background: #ff7b89; }
-        .danmu-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 30px; margin-bottom: 12px; }
-        .danmu-switch { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-        .danmu-switch input { width: 44px; height: 24px; appearance: none; background: #3a3a3c; border-radius: 20px; position: relative; cursor: pointer; }
+        .danmu-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 30px;
+            margin-bottom: 12px;
+        }
+        .danmu-switch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .danmu-switch input {
+            width: 44px;
+            height: 24px;
+            appearance: none;
+            background: #3a3a3c;
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+        }
         .danmu-switch input:checked { background: #ff7b89; }
-        .danmu-switch input::before { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: white; top: 2px; left: 3px; transition: 0.2s; }
+        .danmu-switch input::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 3px;
+            transition: 0.2s;
+        }
         .danmu-switch input:checked::before { left: 21px; }
-        .danmu-color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+        .danmu-color-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
         .danmu-color-btn.active { border-color: white; }
-        .danmu-speed { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-left: 12px; }
+        .danmu-speed {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
         .danmu-speed input { width: 80px; }
-        .chat-container { margin-top: 16px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 12px; }
-        .chat-messages { background: rgba(0,0,0,0.5); border-radius: 16px; min-height: 150px; max-height: 200px; overflow-y: auto; padding: 10px; margin-bottom: 12px; }
-        .chat-message { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 13px; }
+        .chat-container {
+            margin-top: 16px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 12px;
+        }
+        .chat-messages {
+            background: rgba(0,0,0,0.5);
+            border-radius: 16px;
+            min-height: 150px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+        .chat-message {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 13px;
+        }
         .chat-message .sender { color: #ff7b89; font-weight: bold; margin-right: 8px; }
         .chat-message .time { color: #888; font-size: 10px; margin-left: 8px; }
-        .chat-input-area { display: flex; gap: 8px; }
-        .chat-input-area input { flex: 1; background: rgba(255,255,255,0.1); border: none; border-radius: 30px; padding: 12px 16px; color: white; outline: none; }
-        .chat-input-area button { background: #ff7b89; border: none; border-radius: 30px; padding: 0 18px; color: white; font-weight: bold; cursor: pointer; }
-        .sign-card { background: rgba(255,255,255,0.08); border-radius: 28px; padding: 24px; margin-bottom: 24px; text-align: center; }
-        .sign-btn { background: #ff7b89; border: none; border-radius: 40px; padding: 12px 24px; font-size: 18px; font-weight: bold; margin-top: 16px; cursor: pointer; color: white; }
-        .profile-header { display: flex; align-items: center; gap: 20px; background: rgba(255,255,255,0.08); border-radius: 32px; padding: 20px; margin-bottom: 24px; }
-        .avatar-img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #ff7b89; cursor: pointer; }
-        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 20px; margin-bottom: 12px; cursor: pointer; }
-        .toggle-switch { width: 50px; height: 28px; background: #3a3a3c; border-radius: 30px; position: relative; }
+        .chat-input-area {
+            display: flex;
+            gap: 8px;
+        }
+        .chat-input-area input {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 30px;
+            padding: 12px 16px;
+            color: white;
+            outline: none;
+        }
+        .chat-input-area button {
+            background: #ff7b89;
+            border: none;
+            border-radius: 30px;
+            padding: 0 18px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .sign-card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 28px;
+            padding: 24px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .sign-btn {
+            background: #ff7b89;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 24px;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 16px;
+            cursor: pointer;
+            color: white;
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 32px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .avatar-img {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #ff7b89;
+            cursor: pointer;
+        }
+        .user-info h3 { font-size: 18px; }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+        .toggle-switch {
+            width: 50px;
+            height: 28px;
+            background: #3a3a3c;
+            border-radius: 30px;
+            position: relative;
+        }
         .toggle-switch.active { background: #ff7b89; }
-        .toggle-switch::after { content: ""; width: 24px; height: 24px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 3px; transition: 0.2s; }
+        .toggle-switch::after {
+            content: "";
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            transition: 0.2s;
+        }
         .toggle-switch.active::after { left: 23px; }
-        .logout-btn { background: rgba(255,70,70,0.2); color: #ff4646; text-align: center; border-radius: 28px; padding: 14px; margin-top: 20px; font-weight: bold; cursor: pointer; }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-        .modal-card { background: #1c1c1e; border-radius: 40px; padding: 28px; width: 90%; max-width: 380px; }
-        .modal-card input { width: 100%; margin: 12px 0; padding: 14px; border-radius: 30px; border: none; background: #2c2c2e; color: white; outline: none; }
-        .modal-btn { background: #ff7b89; padding: 12px; border-radius: 30px; text-align: center; margin-top: 12px; font-weight: bold; cursor: pointer; color: white; }
+        .logout-btn {
+            background: rgba(255,70,70,0.2);
+            color: #ff4646;
+            text-align: center;
+            border-radius: 28px;
+            padding: 14px;
+            margin-top: 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal-card {
+            background: #1c1c1e;
+            border-radius: 40px;
+            padding: 28px;
+            width: 90%;
+            max-width: 380px;
+        }
+        .modal-card input {
+            width: 100%;
+            margin: 12px 0;
+            padding: 14px;
+            border-radius: 30px;
+            border: none;
+            background: #2c2c2e;
+            color: white;
+            outline: none;
+        }
+        .modal-btn {
+            background: #ff7b89;
+            padding: 12px;
+            border-radius: 30px;
+            text-align: center;
+            margin-top: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+        }
         @media (max-width: 600px) {
             .anime-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+            .ep-btn { padding: 6px 14px; font-size: 12px; }
         }
     </style>
 </head>
@@ -128,7 +429,7 @@
     </div>
     <div class="search-bar"><span>🔍</span><input type="text" id="search-input" placeholder="搜索动漫..."></div>
     <div class="anime-grid" id="anime-grid"><div class="loading-text">加载动漫库中...</div></div>
-    <div class="debug-info" id="debug-info" style="font-size:12px; color:#ff9a5a; text-align:center; margin-top:20px; padding:12px; background:rgba(0,0,0,0.3); border-radius:12px;"></div>
+    <div class="debug-info" id="debug-info"></div>
 </div>
 
 <div id="page-sign" class="page">
@@ -199,6 +500,7 @@
 </div>
 
 <script>
+    // Firebase 配置
     const firebaseConfig = {
         apiKey: "AIzaSyBhc2JVAoxfk3wEsLee-Gr4I1StgqsPkBU",
         authDomain: "zijunblog.firebaseapp.com",
@@ -230,10 +532,11 @@
     let danmuSpeed = 5;
     let danmuElements = [];
     let shownDanmuIds = new Set();
-    let currentPlayer = null;      // YouTube 播放器对象
+    let currentPlayer = null;
     let isYouTubeMode = false;
     let currentVideoElement = null;
     let timeCheckInterval = null;
+    let resizeObserver = null;
     
     const speedMap = {1:0.8, 2:1.0, 3:1.2, 4:1.5, 5:1.8, 6:2.2, 7:2.6, 8:3.0, 9:3.5, 10:4.0};
     const speedNames = ['极慢','慢速','中慢','中速','标准','中快','快速','很快','极快','疯狂'];
@@ -254,6 +557,42 @@
             return currentVideoElement.currentTime;
         }
         return 0;
+    }
+    
+    // 更新画布大小 - 支持全屏
+    function updateCanvasSize() {
+        const wrapper = document.getElementById('video-wrapper');
+        const canvas = document.getElementById('danmu-canvas');
+        if (wrapper && canvas) {
+            const rect = wrapper.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            console.log("画布尺寸更新:", rect.width, rect.height);
+        }
+    }
+    
+    // 监听全屏变化
+    function setupFullscreenListener() {
+        const fullscreenEvents = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
+        fullscreenEvents.forEach(event => {
+            document.addEventListener(event, () => {
+                setTimeout(updateCanvasSize, 100);
+                setTimeout(updateCanvasSize, 500);
+            });
+        });
+    }
+    
+    // 使用 ResizeObserver 监听画布大小变化
+    function setupResizeObserver() {
+        const wrapper = document.getElementById('video-wrapper');
+        if (wrapper && window.ResizeObserver) {
+            resizeObserver = new ResizeObserver(() => {
+                updateCanvasSize();
+            });
+            resizeObserver.observe(wrapper);
+        }
     }
     
     function renderChatMessages() {
@@ -282,7 +621,10 @@
         const canvas = document.getElementById('danmu-canvas');
         if (!canvas) return;
         const width = canvas.width, height = canvas.height;
-        if (width === 0 || height === 0) return;
+        if (width === 0 || height === 0) {
+            setTimeout(() => addDanmuToCanvas(text, colorIndex), 100);
+            return;
+        }
         
         const ctx = canvas.getContext('2d');
         const y = 30 + Math.random() * (height - 60);
@@ -384,7 +726,7 @@
         return true;
     }
     
-    // YouTube Player 回调
+    // YouTube Player 回调 - 无广告参数
     window.onYouTubeIframeAPIReady = function() {
         if (window.ytReadyCallback) window.ytReadyCallback();
     };
@@ -393,13 +735,15 @@
         const container = document.getElementById(containerId);
         if (!container) return;
         
-        // 停止旧的时间检查
         if (timeCheckInterval) clearInterval(timeCheckInterval);
+        if (currentPlayer && isYouTubeMode) {
+            try { currentPlayer.destroy(); } catch(e) {}
+        }
         currentPlayer = null;
         isYouTubeMode = false;
         currentVideoElement = null;
         
-        // YouTube
+        // YouTube - 添加无广告参数
         const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
         if (ytMatch) {
             const videoId = ytMatch[1];
@@ -409,27 +753,50 @@
             const createPlayer = () => {
                 if (window.YT && window.YT.Player) {
                     currentPlayer = new YT.Player('youtube-player', {
-                        height: '50vh', width: '100%', videoId: videoId,
-                        events: {
-                            onReady: () => { startTimeCheck(); },
-                            onStateChange: (e) => { if (e.data === 1) startTimeCheck(); }
+                        height: '100%', width: '100%', videoId: videoId,
+                        playerVars: {
+                            controls: 1,
+                            rel: 0,
+                            modestbranding: 1,
+                            iv_load_policy: 3,      // 关闭注释
+                            fs: 1,                   // 允许全屏
+                            autoplay: 0,
+                            cc_load_policy: 0,       // 关闭字幕
+                            showinfo: 0,
+                            enablejsapi: 1,
+                            origin: window.location.origin
                         },
-                        playerVars: { controls: 1, rel: 0, modestbranding: 1 }
+                        events: {
+                            onReady: () => {
+                                startTimeCheck();
+                                updateCanvasSize();
+                            },
+                            onStateChange: (e) => {
+                                if (e.data === 1) {
+                                    startTimeCheck();
+                                    updateCanvasSize();
+                                }
+                            },
+                            onFullscreenChange: (e) => {
+                                setTimeout(updateCanvasSize, 100);
+                            }
+                        }
                     });
                 } else { setTimeout(createPlayer, 100); }
             };
             window.ytReadyCallback = createPlayer;
             if (window.YT && window.YT.Player) createPlayer();
-            else { if (!document.querySelector('#youtube-api-script')) { const tag = document.createElement('script'); tag.src = 'https://www.youtube.com/iframe_api'; tag.id = 'youtube-api-script'; document.head.appendChild(tag); } }
-            
-            setTimeout(() => {
-                const wrapper = document.getElementById('video-wrapper');
-                const canvas = document.getElementById('danmu-canvas');
-                if (wrapper && canvas) {
-                    const rect = wrapper.getBoundingClientRect();
-                    canvas.width = rect.width;
-                    canvas.height = rect.height;
+            else {
+                if (!document.querySelector('#youtube-api-script')) {
+                    const tag = document.createElement('script');
+                    tag.src = 'https://www.youtube.com/iframe_api';
+                    tag.id = 'youtube-api-script';
+                    document.head.appendChild(tag);
                 }
+            }
+            setTimeout(() => {
+                updateCanvasSize();
+                setupFullscreenListener();
             }, 500);
             return;
         }
@@ -442,13 +809,9 @@
                 if (video) {
                     currentVideoElement = video;
                     startTimeCheck();
-                    const wrapper = document.getElementById('video-wrapper');
-                    const canvas = document.getElementById('danmu-canvas');
-                    if (wrapper && canvas) {
-                        const rect = wrapper.getBoundingClientRect();
-                        canvas.width = rect.width;
-                        canvas.height = rect.height;
-                    }
+                    updateCanvasSize();
+                    video.addEventListener('loadedmetadata', updateCanvasSize);
+                    video.addEventListener('resize', updateCanvasSize);
                 }
             }, 100);
             return;
@@ -460,19 +823,6 @@
         }
         
         container.innerHTML = `<div style="text-align:center; padding:80px 20px;"><p>🎬 点击下方按钮下载观看</p><a href="${url}" target="_blank" style="color:#ff7b89;">下载视频</a></div>`;
-    }
-    
-    // 更新画布大小
-    function updateCanvasSize() {
-        const wrapper = document.getElementById('video-wrapper');
-        const canvas = document.getElementById('danmu-canvas');
-        if (wrapper && canvas) {
-            const rect = wrapper.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            canvas.style.width = rect.width + 'px';
-            canvas.style.height = rect.height + 'px';
-        }
     }
     
     // ==================== GitHub Issues 数据获取 ====================
@@ -585,6 +935,8 @@
         initFirestoreListener(animeId, "ep_0");
         document.getElementById("player-modal").style.display = "block";
         updateCanvasSize();
+        setupResizeObserver();
+        setupFullscreenListener();
         shownDanmuIds.clear();
         danmuElements = [];
     }
@@ -604,6 +956,7 @@
         if (currentUnsubscribe) currentUnsubscribe();
         if (timeCheckInterval) clearInterval(timeCheckInterval);
         if (currentPlayer && isYouTubeMode) { try { currentPlayer.destroy(); } catch(e) {} }
+        if (resizeObserver) { resizeObserver.disconnect(); }
         currentPlayer = null;
         currentVideoElement = null;
         danmuElements = [];
@@ -648,7 +1001,7 @@
         if (e.key === 'Enter') document.getElementById("send-danmu")?.click();
     });
     
-    window.addEventListener('resize', updateCanvasSize);
+    window.addEventListener('resize', () => setTimeout(updateCanvasSize, 100));
     
     // 导航栏
     (function() {
