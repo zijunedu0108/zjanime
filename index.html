@@ -4,166 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>Animix - 动漫集结地</title>
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <!-- YouTube IFrame Player API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     
     <style>
-        .video-wrapper {
-            position: relative;
-            width: 100%;
-            background: #000;
-        }
-        .danmu-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-        .danmu-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-        }
-        .danmu-switch {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-        .danmu-switch input {
-            width: 40px;
-            height: 20px;
-            appearance: none;
-            background: #3a3a3c;
-            border-radius: 20px;
-            position: relative;
-            cursor: pointer;
-        }
-        .danmu-switch input:checked {
-            background: #ff7b89;
-        }
-        .danmu-switch input::before {
-            content: '';
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: white;
-            top: 2px;
-            left: 3px;
-            transition: 0.2s;
-        }
-        .danmu-switch input:checked::before {
-            left: 21px;
-        }
-        .danmu-color-btn {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            cursor: pointer;
-        }
-        .danmu-color-btn.active {
-            border-color: white;
-            transform: scale(1.1);
-        }
-        .danmu-speed {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-        }
-        .danmu-speed input {
-            width: 80px;
-            cursor: pointer;
-        }
-        .chat-container {
-            margin-top: 16px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 20px;
-            padding: 12px;
-        }
-        .chat-messages {
-            background: rgba(0,0,0,0.5);
-            border-radius: 16px;
-            min-height: 150px;
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 10px;
-            margin-bottom: 12px;
-        }
-        .chat-message {
-            padding: 6px 10px;
-            margin-bottom: 4px;
-            border-radius: 20px;
-            font-size: 13px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .chat-message .sender {
-            color: #ff7b89;
-            font-weight: bold;
-            margin-right: 8px;
-        }
-        .chat-message .time {
-            color: #888;
-            font-size: 10px;
-            margin-left: 8px;
-        }
-        .chat-message .text {
-            color: #ddd;
-        }
-        .chat-input-area {
-            display: flex;
-            gap: 8px;
-        }
-        .chat-input-area input {
-            flex: 1;
-            background: rgba(255,255,255,0.1);
-            border: none;
-            border-radius: 30px;
-            padding: 10px 16px;
-            color: white;
-            outline: none;
-        }
-        .chat-input-area button {
-            background: #ff7b89;
-            border: none;
-            border-radius: 30px;
-            padding: 0 20px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .video-placeholder {
-            text-align: center;
-            padding: 80px 20px;
-            color: #aaa;
-        }
-        .video-placeholder a {
-            color: #ff7b89;
-            display: inline-block;
-            margin-top: 12px;
-            padding: 10px 20px;
-            background: rgba(255,123,137,0.2);
-            border-radius: 30px;
-            text-decoration: none;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background: #0b0b0e;
             color: #ffffff;
-            transition: background 0.3s, color 0.3s;
             padding-bottom: 80px;
         }
-        body.light { background: #f2f2f6; color: #1c1c1e; }
         .bottom-nav {
             position: fixed;
             bottom: 20px;
@@ -171,75 +25,92 @@
             transform: translateX(-50%);
             width: 90%;
             max-width: 400px;
-            background: rgba(30, 30, 35, 0.85);
+            background: rgba(30,30,35,0.85);
             backdrop-filter: blur(20px);
             border-radius: 32px;
             display: flex;
             justify-content: space-around;
-            padding: 10px 16px;
+            padding: 8px 12px;
             z-index: 1000;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            border: 0.5px solid rgba(255,255,255,0.2);
         }
-        body.light .bottom-nav { background: rgba(255, 255, 255, 0.85); border: 0.5px solid rgba(0,0,0,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: #aaa; transition: 0.2s; cursor: pointer; flex: 1; border-radius: 24px; padding: 6px 0; background: transparent; border: none; font-family: inherit; }
-        .nav-item.active { color: #ff7b89; background: rgba(255,123,137,0.15); }
-        .nav-label { font-size: 13px; letter-spacing: 0.5px; }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #aaa;
+            cursor: pointer;
+            flex: 1;
+            padding: 8px 0;
+            background: transparent;
+            border: none;
+        }
+        .nav-item.active { color: #ff7b89; background: rgba(255,123,137,0.15); border-radius: 24px; }
         .page { display: none; padding: 20px 16px 30px; max-width: 1200px; margin: 0 auto; }
         .page.active { display: block; }
         .logo-area { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-        .circle-icon { width: 44px; height: 44px; background: #1f1f24; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .circle-icon { width: 44px; height: 44px; background: #1f1f24; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid white; }
         .circle-icon img { width: 100%; height: 100%; object-fit: cover; }
         h1 { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #ff7b89, #ff9a5a); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .search-bar { background: rgba(255,255,255,0.1); border-radius: 30px; padding: 10px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        .search-bar { background: rgba(255,255,255,0.1); border-radius: 30px; padding: 12px 18px; margin-bottom: 20px; display: flex; gap: 8px; }
         .search-bar input { flex: 1; background: transparent; border: none; outline: none; color: inherit; font-size: 16px; }
-        .anime-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 20px; margin-top: 8px; }
-        .anime-card { background: rgba(30,30,35,0.6); border-radius: 20px; overflow: hidden; transition: transform 0.2s; cursor: pointer; }
-        .anime-card:hover { transform: translateY(-4px); }
+        .anime-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+        .anime-card { background: rgba(30,30,35,0.6); border-radius: 16px; overflow: hidden; cursor: pointer; }
         .anime-card img { width: 100%; aspect-ratio: 194 / 259; object-fit: cover; }
-        .anime-info { padding: 12px; }
-        .anime-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .anime-info { padding: 10px; }
+        .anime-title { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .anime-ep { font-size: 12px; color: #ff9a5a; }
         .loading-text, .empty-text { text-align: center; padding: 40px; color: #aaa; }
-        .debug-info { font-size: 12px; color: #ff9a5a; text-align: center; margin-top: 20px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 12px; word-break: break-all; }
+        
         #player-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1500; overflow-y: auto; }
         .player-container { width: 100%; min-height: 100%; background: #000; display: flex; flex-direction: column; }
         .video-wrapper { position: relative; width: 100%; background: #000; }
-        .video-wrapper iframe { width: 100%; height: 60vh; border: none; }
-        .video-wrapper video { width: 100%; max-height: 60vh; }
+        .video-wrapper iframe { width: 100%; height: 50vh; border: none; }
+        .video-wrapper video { width: 100%; max-height: 50vh; }
+        .danmu-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         .player-controls { position: absolute; top: 10px; right: 15px; z-index: 20; }
-        .close-player-btn { background: rgba(0,0,0,0.6); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; color: white; backdrop-filter: blur(10px); }
+        .close-player-btn { background: rgba(0,0,0,0.6); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; color: white; }
         .player-info-panel { background: rgba(20,20,25,0.95); padding: 16px; }
-        .episode-buttons { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
-        .ep-btn { background: #2c2c2e; border: none; padding: 8px 20px; border-radius: 30px; color: white; font-weight: 500; cursor: pointer; }
+        .episode-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+        .ep-btn { background: #2c2c2e; border: none; padding: 8px 20px; border-radius: 30px; color: white; font-weight: 500; cursor: pointer; font-size: 14px; }
         .ep-btn.active { background: #ff7b89; }
-        .sign-card { background: rgba(255,255,255,0.08); border-radius: 28px; padding: 20px; margin-bottom: 24px; text-align: center; }
+        .danmu-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 30px; margin-bottom: 12px; }
+        .danmu-switch { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .danmu-switch input { width: 44px; height: 24px; appearance: none; background: #3a3a3c; border-radius: 20px; position: relative; cursor: pointer; }
+        .danmu-switch input:checked { background: #ff7b89; }
+        .danmu-switch input::before { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: white; top: 2px; left: 3px; transition: 0.2s; }
+        .danmu-switch input:checked::before { left: 21px; }
+        .danmu-color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+        .danmu-color-btn.active { border-color: white; }
+        .danmu-speed { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-left: 12px; }
+        .danmu-speed input { width: 80px; }
+        .chat-container { margin-top: 16px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 12px; }
+        .chat-messages { background: rgba(0,0,0,0.5); border-radius: 16px; min-height: 150px; max-height: 200px; overflow-y: auto; padding: 10px; margin-bottom: 12px; }
+        .chat-message { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 13px; }
+        .chat-message .sender { color: #ff7b89; font-weight: bold; margin-right: 8px; }
+        .chat-message .time { color: #888; font-size: 10px; margin-left: 8px; }
+        .chat-input-area { display: flex; gap: 8px; }
+        .chat-input-area input { flex: 1; background: rgba(255,255,255,0.1); border: none; border-radius: 30px; padding: 12px 16px; color: white; outline: none; }
+        .chat-input-area button { background: #ff7b89; border: none; border-radius: 30px; padding: 0 18px; color: white; font-weight: bold; cursor: pointer; }
+        .sign-card { background: rgba(255,255,255,0.08); border-radius: 28px; padding: 24px; margin-bottom: 24px; text-align: center; }
         .sign-btn { background: #ff7b89; border: none; border-radius: 40px; padding: 12px 24px; font-size: 18px; font-weight: bold; margin-top: 16px; cursor: pointer; color: white; }
-        .announcement-item { background: rgba(0,0,0,0.2); border-radius: 20px; padding: 16px; margin-bottom: 12px; }
         .profile-header { display: flex; align-items: center; gap: 20px; background: rgba(255,255,255,0.08); border-radius: 32px; padding: 20px; margin-bottom: 24px; }
         .avatar-img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #ff7b89; cursor: pointer; }
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 20px; margin-bottom: 12px; cursor: pointer; }
-        .toggle-switch { width: 44px; height: 24px; background: #3a3a3c; border-radius: 30px; position: relative; }
+        .toggle-switch { width: 50px; height: 28px; background: #3a3a3c; border-radius: 30px; position: relative; }
         .toggle-switch.active { background: #ff7b89; }
-        .toggle-switch::after { content: ""; width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 3px; transition: 0.2s; }
-        .toggle-switch.active::after { left: 21px; }
+        .toggle-switch::after { content: ""; width: 24px; height: 24px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 3px; transition: 0.2s; }
+        .toggle-switch.active::after { left: 23px; }
         .logout-btn { background: rgba(255,70,70,0.2); color: #ff4646; text-align: center; border-radius: 28px; padding: 14px; margin-top: 20px; font-weight: bold; cursor: pointer; }
-        .custom-dialog { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 3000; }
-        .dialog-card { background: #1c1c1e; border-radius: 32px; padding: 24px; width: 85%; max-width: 320px; text-align: center; }
-        .dialog-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
-        .dialog-message { font-size: 14px; margin-bottom: 24px; opacity: 0.8; }
-        .dialog-buttons { display: flex; gap: 12px; }
-        .dialog-btn { flex: 1; padding: 12px; border-radius: 28px; font-weight: bold; cursor: pointer; border: none; }
-        .dialog-btn.confirm { background: #ff7b89; color: white; }
-        .dialog-btn.cancel { background: rgba(255,255,255,0.1); color: #ff7b89; }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
         .modal-card { background: #1c1c1e; border-radius: 40px; padding: 28px; width: 90%; max-width: 380px; }
         .modal-card input { width: 100%; margin: 12px 0; padding: 14px; border-radius: 30px; border: none; background: #2c2c2e; color: white; outline: none; }
         .modal-btn { background: #ff7b89; padding: 12px; border-radius: 30px; text-align: center; margin-top: 12px; font-weight: bold; cursor: pointer; color: white; }
-        .avatar-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; max-height: 300px; overflow-y: auto; }
-        .avatar-option { text-align: center; cursor: pointer; padding: 8px; border-radius: 16px; background: rgba(255,255,255,0.05); }
-        .avatar-option img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; }
-        .avatar-option span { font-size: 12px; display: block; margin-top: 4px; }
+        @media (max-width: 600px) {
+            .anime-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+        }
     </style>
 </head>
 <body>
@@ -257,7 +128,7 @@
     </div>
     <div class="search-bar"><span>🔍</span><input type="text" id="search-input" placeholder="搜索动漫..."></div>
     <div class="anime-grid" id="anime-grid"><div class="loading-text">加载动漫库中...</div></div>
-    <div class="debug-info" id="debug-info"></div>
+    <div class="debug-info" id="debug-info" style="font-size:12px; color:#ff9a5a; text-align:center; margin-top:20px; padding:12px; background:rgba(0,0,0,0.3); border-radius:12px;"></div>
 </div>
 
 <div id="page-sign" class="page">
@@ -296,13 +167,10 @@
             <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
                 <div style="display:flex; gap:12px; align-items:center;">
                     <img id="player-poster" width="50" style="border-radius:12px;">
-                    <div><h3 id="player-title"></h3><p id="player-desc" style="font-size:12px; opacity:0.7;"></p></div>
+                    <div><h3 id="player-title" style="font-size:16px;"></h3><p id="player-desc" style="font-size:12px; opacity:0.7;"></p></div>
                 </div>
                 <div class="danmu-controls">
-                    <label class="danmu-switch">
-                        <input type="checkbox" id="danmu-toggle" checked>
-                        <span>弹幕</span>
-                    </label>
+                    <label class="danmu-switch"><input type="checkbox" id="danmu-toggle" checked><span>弹幕</span></label>
                     <div class="danmu-speed">
                         <span>⚡</span>
                         <input type="range" id="danmu-speed" min="1" max="10" value="5">
@@ -319,10 +187,10 @@
             </div>
             <div class="episode-buttons" id="episode-list"></div>
             <div class="chat-container">
-                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-messages" id="chat-messages"><div style="text-align:center; padding:20px; color:#888;">暂无消息</div></div>
                 <div class="chat-input-area">
-                    <input type="text" id="chat-input" placeholder="说点什么... 回车发送弹幕">
-                    <button id="send-danmu">发弹幕</button>
+                    <input type="text" id="chat-input" placeholder="说点什么...">
+                    <button id="send-danmu">弹幕</button>
                     <button id="send-chat">发送</button>
                 </div>
             </div>
@@ -331,15 +199,13 @@
 </div>
 
 <script>
-    // ==================== Firebase 配置 ====================
     const firebaseConfig = {
         apiKey: "AIzaSyBhc2JVAoxfk3wEsLee-Gr4I1StgqsPkBU",
         authDomain: "zijunblog.firebaseapp.com",
         projectId: "zijunblog",
         storageBucket: "zijunblog.firebasestorage.app",
         messagingSenderId: "689359220073",
-        appId: "1:689359220073:web:be9d4a467f438b6e8de1f8",
-        measurementId: "G-M8540FQZQD"
+        appId: "1:689359220073:web:be9d4a467f438b6e8de1f8"
     };
     
     let app, auth, db;
@@ -347,114 +213,164 @@
         app = firebase.initializeApp(firebaseConfig);
         auth = firebase.auth();
         db = firebase.firestore();
-        console.log("Firebase 初始化成功");
+        console.log("✅ Firebase 初始化成功");
+        document.getElementById("debug-info").innerHTML = "✅ Firebase 连接成功";
     } catch(e) {
-        console.warn("Firebase 初始化失败:", e);
+        console.error("❌ Firebase 初始化失败:", e);
+        document.getElementById("debug-info").innerHTML = "❌ Firebase 连接失败";
     }
     
-    // ==================== 配置 ====================
-    const GITHUB_OWNER = "zijunedu0108";
-    const GITHUB_REPO = "zjanime";
-    
-    // ==================== 弹幕系统 ====================
+    // 全局变量
     let currentUnsubscribe = null;
+    let currentAnimeId = "";
+    let currentEpisodeId = "";
+    let allMessages = [];
     let danmuEnabled = true;
     let currentDanmuColor = 0;
     let danmuSpeed = 5;
-    let currentAnimeId = "";
-    let currentEpisodeId = "";
+    let danmuElements = [];
+    let shownDanmuIds = new Set();
+    let currentPlayer = null;      // YouTube 播放器对象
+    let isYouTubeMode = false;
     let currentVideoElement = null;
-    let videoTimeCheckInterval = null;
-    let currentAnimationFrame = null;  // 用于控制弹幕动画
-    let activeDanmuTexts = [];  // 防止重复弹幕
+    let timeCheckInterval = null;
     
-    const speedMap = {1:0.5,2:0.7,3:0.85,4:1.0,5:1.2,6:1.4,7:1.6,8:1.8,9:2.0,10:2.5};
+    const speedMap = {1:0.8, 2:1.0, 3:1.2, 4:1.5, 5:1.8, 6:2.2, 7:2.6, 8:3.0, 9:3.5, 10:4.0};
+    const speedNames = ['极慢','慢速','中慢','中速','标准','中快','快速','很快','极快','疯狂'];
     
-    let allDanmus = [];
-    let danmuElements = [];  // 存储当前活跃的弹幕
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
     
     function formatTime(timestamp) {
         if (!timestamp) return "";
-        let date;
-        if (timestamp && timestamp.toDate) {
-            date = timestamp.toDate();
-        } else if (timestamp) {
-            date = new Date(timestamp);
-        } else {
-            return "";
-        }
-        return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+        let date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+        return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}:${String(date.getSeconds()).padStart(2,'0')}`;
     }
     
-    function initFirebaseListener(animeId, episodeId) {
-        if (currentUnsubscribe) {
-            currentUnsubscribe();
-            currentUnsubscribe = null;
+    function getCurrentVideoTime() {
+        if (currentPlayer && isYouTubeMode) {
+            try { return currentPlayer.getCurrentTime(); } catch(e) { return 0; }
         }
-        if (!db) return;
-        
-        currentAnimeId = animeId;
-        currentEpisodeId = episodeId;
-        allDanmus = [];
-        danmuElements = [];
-        
-        const messagesRef = db.collection("danmu_messages");
-        const q = messagesRef.where("animeId", "==", animeId).where("episodeId", "==", episodeId).orderBy("timestamp", "asc");
-        
-        currentUnsubscribe = q.onSnapshot((snapshot) => {
-            allDanmus = [];
-            snapshot.forEach(doc => {
-                allDanmus.push({ id: doc.id, ...doc.data() });
-            });
-            renderChatMessages(allDanmus);
-        }, (error) => {
-            console.warn("Firebase 监听失败:", error);
-        });
+        if (currentVideoElement && currentVideoElement.currentTime !== undefined) {
+            return currentVideoElement.currentTime;
+        }
+        return 0;
     }
     
-    function renderChatMessages(messages) {
+    function renderChatMessages() {
         const container = document.getElementById('chat-messages');
         if (!container) return;
-        
-        container.innerHTML = messages.slice(-50).map(msg => `
-            <div class="chat-message">
-                <span class="sender">${escapeHtml(msg.sender || '匿名')}</span>
-                ${msg.isDanmu ? '<span style="color:#ff7b89; font-size:10px;">[弹幕]</span>' : ''}
-                <span class="text">${escapeHtml(msg.text || '')}</span>
-                ${msg.videoTime ? `<span class="time">@${Math.floor(msg.videoTime)}s</span>` : ''}
-                <span class="time">${formatTime(msg.timestamp)}</span>
-            </div>
-        `).join('');
+        if (allMessages.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">暂无消息，发送第一条弹幕吧~</div>';
+            return;
+        }
+        container.innerHTML = allMessages.slice(-50).map(msg => {
+            const danmuTag = msg.isDanmu ? '<span style="color:#ff7b89; font-size:10px;">[弹幕]</span>' : '';
+            const timeTag = msg.videoTime ? `<span class="time">@${Math.floor(msg.videoTime)}s</span>` : '';
+            return `<div class="chat-message">
+                        <span class="sender">${escapeHtml(msg.sender || '匿名')}</span>
+                        ${danmuTag}
+                        <span class="text">${escapeHtml(msg.text || '')}</span>
+                        ${timeTag}
+                        <span class="time">${formatTime(msg.timestamp)}</span>
+                    </div>`;
+        }).join('');
         container.scrollTop = container.scrollHeight;
     }
     
-    function checkAndShowDanmusByTime(currentTime) {
-        if (!danmuEnabled || !allDanmus.length) return;
+    function addDanmuToCanvas(text, colorIndex) {
+        if (!danmuEnabled) return;
+        const canvas = document.getElementById('danmu-canvas');
+        if (!canvas) return;
+        const width = canvas.width, height = canvas.height;
+        if (width === 0 || height === 0) return;
         
-        const danmuToShow = allDanmus.filter(d => d.isDanmu && Math.abs((d.videoTime || 0) - currentTime) < 0.3 && !d._shown);
+        const ctx = canvas.getContext('2d');
+        const y = 30 + Math.random() * (height - 60);
+        const colors = ['#ffffff', '#ff7b89', '#7bff89', '#89b3ff', '#ffd966', '#d966ff'];
+        const color = colors[colorIndex % colors.length];
+        let x = width;
+        const speed = speedMap[danmuSpeed];
         
-        danmuToShow.forEach(danmu => {
-            addDanmuToCanvas(danmu.text, danmu.color || 0);
-            danmu._shown = true;
+        const danmu = { text, color, x, y, speed, active: true };
+        danmuElements.push(danmu);
+        
+        function animate() {
+            if (!danmuEnabled) return;
+            ctx.clearRect(0, 0, width, height);
+            danmuElements = danmuElements.filter(d => d.active);
+            danmuElements.forEach(d => {
+                ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+                ctx.fillStyle = d.color;
+                ctx.shadowBlur = 2;
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.fillText(d.text, d.x, d.y);
+                d.x -= d.speed;
+                if (d.x + ctx.measureText(d.text).width <= 0) d.active = false;
+            });
+            if (danmuElements.length > 0) requestAnimationFrame(animate);
+        }
+        if (danmuElements.length === 1) requestAnimationFrame(animate);
+    }
+    
+    function checkAndShowDanmus(currentTime) {
+        if (!danmuEnabled || !allMessages.length) return;
+        allMessages.forEach(msg => {
+            if (msg.isDanmu && !shownDanmuIds.has(msg.id) && Math.abs(msg.videoTime - currentTime) < 0.5) {
+                addDanmuToCanvas(msg.text, msg.color || 0);
+                shownDanmuIds.add(msg.id);
+                console.log("🎯 显示弹幕:", msg.text, "@", msg.videoTime);
+            }
         });
     }
     
-    async function sendMessageToFirebase(text, isDanmu) {
-        if (!window.currentUser) {
-            showToast("请先登录");
-            return false;
-        }
-        if (!currentAnimeId) {
-            showToast("请先播放视频");
-            return false;
-        }
+    function startTimeCheck() {
+        if (timeCheckInterval) clearInterval(timeCheckInterval);
+        timeCheckInterval = setInterval(() => {
+            const ct = getCurrentVideoTime();
+            if (ct > 0) checkAndShowDanmus(ct);
+        }, 500);
+    }
+    
+    function initFirestoreListener(animeId, episodeId) {
+        if (currentUnsubscribe) currentUnsubscribe();
+        currentAnimeId = animeId;
+        currentEpisodeId = episodeId;
+        allMessages = [];
+        shownDanmuIds.clear();
         
-        let videoTime = 0;
-        if (currentVideoElement && currentVideoElement.currentTime !== undefined) {
-            videoTime = currentVideoElement.currentTime;
-        }
+        if (!db) return;
         
-        const messageData = {
+        const q = db.collection("danmu_messages")
+            .where("animeId", "==", animeId)
+            .where("episodeId", "==", episodeId)
+            .orderBy("timestamp", "asc");
+        
+        currentUnsubscribe = q.onSnapshot(snapshot => {
+            allMessages = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                allMessages.push({
+                    id: doc.id,
+                    text: data.text,
+                    sender: data.sender,
+                    isDanmu: data.isDanmu === true,
+                    videoTime: data.videoTime || 0,
+                    color: data.color || 0,
+                    timestamp: data.timestamp
+                });
+            });
+            renderChatMessages();
+            const ct = getCurrentVideoTime();
+            if (ct > 0) checkAndShowDanmus(ct);
+        }, error => console.error("监听错误:", error));
+    }
+    
+    async function sendMessage(text, isDanmu) {
+        if (!window.currentUser) { alert("请先登录"); return false; }
+        if (!currentAnimeId) { alert("请先播放视频"); return false; }
+        
+        const videoTime = getCurrentVideoTime();
+        await db.collection("danmu_messages").add({
             animeId: currentAnimeId,
             episodeId: currentEpisodeId,
             sender: window.currentUser.displayName || window.currentUser.email?.split('@')[0] || "匿名",
@@ -463,159 +379,100 @@
             color: isDanmu ? currentDanmuColor : 0,
             videoTime: videoTime,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        try {
-            if (db) {
-                await db.collection("danmu_messages").add(messageData);
-            }
-            // 发送后立即显示在自己画面上
-            if (isDanmu) {
-                addDanmuToCanvas(text, currentDanmuColor);
-            }
-            return true;
-        } catch (error) {
-            console.error("发送失败:", error);
-            showToast("发送失败: " + error.message);
-            return false;
-        }
-    }
-    
-    // 修复弹幕重复问题 - 每个弹幕只创建一个独立的动画
-    function addDanmuToCanvas(text, colorIndex) {
-        if (!danmuEnabled) return;
-        
-        const canvas = document.getElementById('danmu-canvas');
-        if (!canvas) return;
-        
-        const width = canvas.width;
-        const height = canvas.height;
-        if (width === 0 || height === 0) return;
-        
-        // 获取画布上下文
-        const ctx = canvas.getContext('2d');
-        
-        // 随机 Y 位置，避免重叠
-        const y = 30 + Math.random() * (height - 60);
-        const colors = ['#ffffff', '#ff7b89', '#7bff89', '#89b3ff', '#ffd966', '#d966ff'];
-        const color = colors[colorIndex % colors.length];
-        let x = width;
-        const speed = speedMap[danmuSpeed] * 2;
-        
-        // 为每个弹幕创建独立的动画
-        function animate() {
-            if (!danmuEnabled || !canvas) return;
-            
-            // 清除整个画布并重新绘制所有弹幕
-            ctx.clearRect(0, 0, width, height);
-            
-            // 重新绘制所有活跃弹幕
-            danmuElements.forEach(d => {
-                if (d.active) {
-                    ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI"';
-                    ctx.fillStyle = d.color;
-                    ctx.shadowBlur = 2;
-                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                    ctx.fillText(d.text, d.x, d.y);
-                    d.x -= d.speed;
-                    if (d.x + ctx.measureText(d.text).width <= 0) {
-                        d.active = false;
-                    }
-                }
-            });
-            
-            // 移除不活跃的弹幕
-            danmuElements = danmuElements.filter(d => d.active);
-            
-            if (danmuElements.length > 0) {
-                requestAnimationFrame(animate);
-            }
-        }
-        
-        // 添加新弹幕
-        danmuElements.push({
-            text: text,
-            color: color,
-            x: x,
-            y: y,
-            speed: speed,
-            active: true
         });
-        
-        // 如果当前没有动画，启动动画
-        if (danmuElements.length === 1) {
-            requestAnimationFrame(animate);
-        }
+        if (isDanmu) addDanmuToCanvas(text, currentDanmuColor);
+        return true;
     }
     
-    function startVideoTimeCheck() {
-        if (videoTimeCheckInterval) clearInterval(videoTimeCheckInterval);
-        videoTimeCheckInterval = setInterval(() => {
-            if (currentVideoElement && currentVideoElement.currentTime !== undefined && !currentVideoElement.paused) {
-                checkAndShowDanmusByTime(currentVideoElement.currentTime);
-            }
-        }, 500);
-    }
+    // YouTube Player 回调
+    window.onYouTubeIframeAPIReady = function() {
+        if (window.ytReadyCallback) window.ytReadyCallback();
+    };
     
-    function initCanvasAndVideo() {
-        const wrapper = document.getElementById('video-wrapper');
-        const canvas = document.getElementById('danmu-canvas');
-        if (!wrapper || !canvas) return;
-        
-        const updateSize = () => {
-            const rect = wrapper.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            canvas.style.width = rect.width + 'px';
-            canvas.style.height = rect.height + 'px';
-            // 重置画布内容
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        };
-        updateSize();
-        window.addEventListener('resize', updateSize);
-        
-        const video = document.querySelector('#player-container video');
-        if (video) {
-            currentVideoElement = video;
-            startVideoTimeCheck();
-        }
-    }
-    
-    // ==================== 播放器渲染 ====================
     function renderPlayerContent(url, containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
         
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            let embedUrl = url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
-            container.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%; height:60vh; border:none;"></iframe>`;
+        // 停止旧的时间检查
+        if (timeCheckInterval) clearInterval(timeCheckInterval);
+        currentPlayer = null;
+        isYouTubeMode = false;
+        currentVideoElement = null;
+        
+        // YouTube
+        const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+        if (ytMatch) {
+            const videoId = ytMatch[1];
+            container.innerHTML = `<div id="youtube-player"></div>`;
+            isYouTubeMode = true;
+            
+            const createPlayer = () => {
+                if (window.YT && window.YT.Player) {
+                    currentPlayer = new YT.Player('youtube-player', {
+                        height: '50vh', width: '100%', videoId: videoId,
+                        events: {
+                            onReady: () => { startTimeCheck(); },
+                            onStateChange: (e) => { if (e.data === 1) startTimeCheck(); }
+                        },
+                        playerVars: { controls: 1, rel: 0, modestbranding: 1 }
+                    });
+                } else { setTimeout(createPlayer, 100); }
+            };
+            window.ytReadyCallback = createPlayer;
+            if (window.YT && window.YT.Player) createPlayer();
+            else { if (!document.querySelector('#youtube-api-script')) { const tag = document.createElement('script'); tag.src = 'https://www.youtube.com/iframe_api'; tag.id = 'youtube-api-script'; document.head.appendChild(tag); } }
+            
             setTimeout(() => {
-                currentVideoElement = null;
-                initCanvasAndVideo();
+                const wrapper = document.getElementById('video-wrapper');
+                const canvas = document.getElementById('danmu-canvas');
+                if (wrapper && canvas) {
+                    const rect = wrapper.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                }
             }, 500);
             return;
         }
         
-        if (url.includes('t.me')) {
-            container.innerHTML = `<div class="video-placeholder"><p>📱 Telegram 视频</p><a href="${url}" target="_blank">在 Telegram 中打开</a></div>`;
-            return;
-        }
-        
+        // 本地视频
         if (url.match(/\.(mp4|webm|mov)$/i)) {
-            container.innerHTML = `<video controls playsinline style="width:100%; max-height:60vh;" src="${url}"></video>`;
+            container.innerHTML = `<video controls playsinline style="width:100%; max-height:50vh;" src="${url}"></video>`;
             setTimeout(() => {
                 const video = container.querySelector('video');
                 if (video) {
                     currentVideoElement = video;
-                    startVideoTimeCheck();
-                    initCanvasAndVideo();
+                    startTimeCheck();
+                    const wrapper = document.getElementById('video-wrapper');
+                    const canvas = document.getElementById('danmu-canvas');
+                    if (wrapper && canvas) {
+                        const rect = wrapper.getBoundingClientRect();
+                        canvas.width = rect.width;
+                        canvas.height = rect.height;
+                    }
                 }
             }, 100);
             return;
         }
         
-        container.innerHTML = `<div class="video-placeholder"><p>🎬 点击下方按钮下载观看</p><a href="${url}" target="_blank">下载视频</a></div>`;
+        if (url.includes('t.me')) {
+            container.innerHTML = `<div style="text-align:center; padding:80px 20px;"><p>📱 Telegram 视频</p><a href="${url}" target="_blank" style="color:#ff7b89;">在 Telegram 中打开</a></div>`;
+            return;
+        }
+        
+        container.innerHTML = `<div style="text-align:center; padding:80px 20px;"><p>🎬 点击下方按钮下载观看</p><a href="${url}" target="_blank" style="color:#ff7b89;">下载视频</a></div>`;
+    }
+    
+    // 更新画布大小
+    function updateCanvasSize() {
+        const wrapper = document.getElementById('video-wrapper');
+        const canvas = document.getElementById('danmu-canvas');
+        if (wrapper && canvas) {
+            const rect = wrapper.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+        }
     }
     
     // ==================== GitHub Issues 数据获取 ====================
@@ -623,33 +480,21 @@
         title: "鬼灭之刃 第一季",
         poster: "https://github.com/user-attachments/assets/c863c3e3-35fb-4474-959f-4aab39055c86",
         episodes: ["https://www.youtube.com/watch?v=K8ngtohhDo4", "https://www.youtube.com/watch?v=calfzpISFWQ"],
-        description: "这是一个非常好看的动漫。请在 GitHub 创建 label 为 anime 的 Issue 来添加自己的动漫。"
+        description: "演示数据"
     }];
     
     async function fetchAnimeFromGitHubIssues() {
         const debugDiv = document.getElementById("debug-info");
-        const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?labels=anime&state=open&per_page=50`;
-        
-        debugDiv.innerHTML = `🔍 请求地址: ${apiUrl}<br>⏳ 正在加载...`;
-        
+        const apiUrl = `https://api.github.com/repos/zijunedu0108/zjanime/issues?labels=anime&state=open&per_page=50`;
+        debugDiv.innerHTML = "🔍 加载动漫库...";
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
-            const response = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' }, signal: controller.signal });
-            clearTimeout(timeoutId);
-            
+            const response = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const issues = await response.json();
-            
-            if (!issues || issues.length === 0) {
-                debugDiv.innerHTML += `<br>⚠️ 没有找到 anime 标签的 issue，使用演示数据`;
-                return DEMO_ANIME;
-            }
-            
+            if (!issues || issues.length === 0) return DEMO_ANIME;
             const animes = [];
             for (const issue of issues) {
-                const title = issue.title;
-                const body = issue.body || "";
+                const title = issue.title, body = issue.body || "";
                 const imgMatch = body.match(/<img[^>]+src=["']([^"']+)["']/i);
                 let poster = imgMatch ? imgMatch[1] : "https://placehold.co/194x259";
                 const episodes = [];
@@ -658,63 +503,44 @@
                     const urlMatch = line.match(/https?:\/\/[^\s]+/);
                     if (urlMatch) {
                         let url = urlMatch[0].replace(/[.,;:]$/, '');
-                        if (!url.includes('user-attachments') && !url.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
-                            episodes.push(url);
-                        }
+                        if (!url.includes('user-attachments') && !url.match(/\.(png|jpg|jpeg|gif|webp)$/i)) episodes.push(url);
                     }
                 }
                 const descMatch = body.match(/介绍\s*[-:：]\s*([^\n]+)/i);
                 let desc = descMatch ? descMatch[1].trim() : "暂无介绍";
                 if (episodes.length > 0) animes.push({ title, poster, episodes, description: desc });
             }
-            
-            if (animes.length === 0) {
-                debugDiv.innerHTML += `<br>⚠️ 没有找到有效视频链接，使用演示数据`;
-                return DEMO_ANIME;
-            }
-            debugDiv.innerHTML += `<br>✅ 共解析出 ${animes.length} 部动漫`;
-            return animes;
+            debugDiv.innerHTML = animes.length > 0 ? `✅ 加载 ${animes.length} 部动漫` : `⚠️ 使用演示数据`;
+            return animes.length > 0 ? animes : DEMO_ANIME;
         } catch (error) {
-            debugDiv.innerHTML = `❌ 请求失败: ${error.message}<br>💡 使用演示数据`;
+            debugDiv.innerHTML = `❌ 加载失败，使用演示数据`;
             return DEMO_ANIME;
         }
     }
     
     async function getAnnouncements() {
         try {
-            const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?labels=alert&state=open`;
-            const response = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
-            if (!response.ok) return [{ title: "欢迎来到Animix", body: "每日签到获取积分，一起看番发弹幕~" }];
+            const response = await fetch(`https://api.github.com/repos/zijunedu0108/zjanime/issues?labels=alert&state=open`, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+            if (!response.ok) return [{ title: "欢迎来到Animix", body: "每日签到获取积分~" }];
             const issues = await response.json();
-            if (!issues.length) return [{ title: "欢迎来到Animix", body: "每日签到获取积分，一起看番发弹幕~" }];
-            return issues.map(i => ({ title: i.title, body: (i.body || "").substring(0, 200) }));
-        } catch (e) {
-            return [{ title: "欢迎来到Animix", body: "每日签到获取积分，一起看番发弹幕~" }];
-        }
+            return issues.length ? issues.map(i => ({ title: i.title, body: (i.body || "").substring(0, 200) })) : [{ title: "欢迎来到Animix", body: "每日签到获取积分~" }];
+        } catch (e) { return [{ title: "欢迎来到Animix", body: "每日签到获取积分~" }]; }
     }
     
     async function getAvatarList() {
         try {
-            const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?labels=avatar&state=open`;
-            const response = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+            const response = await fetch(`https://api.github.com/repos/zijunedu0108/zjanime/issues?labels=avatar&state=open`, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
             if (!response.ok) return [];
             const issues = await response.json();
             return issues.map(issue => {
                 const imgMatch = issue.body?.match(/<img[^>]+src=["']([^"']+)["']/i);
-                return { name: issue.title, imageUrl: imgMatch ? imgMatch[1] : null };
-            }).filter(a => a.imageUrl);
+                return imgMatch ? { name: issue.title, imageUrl: imgMatch[1] } : null;
+            }).filter(a => a);
         } catch(e) { return []; }
     }
     
     // ==================== 页面渲染 ====================
     let episodeUrls = [];
-    let currentAnimeTitle = "";
-    let currentUser = null;
-    
-    function escapeHtml(str) { 
-        if (!str) return ''; 
-        return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); 
-    }
     
     async function renderHomePage(search = "") {
         const grid = document.getElementById("anime-grid");
@@ -732,7 +558,6 @@
     }
     
     function openPlayer(anime) {
-        currentAnimeTitle = anime.title;
         episodeUrls = anime.episodes;
         const animeId = anime.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
         document.getElementById("player-title").innerText = anime.title;
@@ -747,22 +572,24 @@
                 let idx = parseInt(btn.getAttribute("data-epidx"));
                 const episodeId = `ep_${idx}`;
                 renderPlayerContent(episodeUrls[idx], "player-container");
-                if (db) initFirebaseListener(animeId, episodeId);
+                initFirestoreListener(animeId, episodeId);
                 document.querySelectorAll(".ep-btn").forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
-                // 重置弹幕数组
+                shownDanmuIds.clear();
                 danmuElements = [];
+                updateCanvasSize();
             });
         });
         
         renderPlayerContent(episodeUrls[0], "player-container");
-        if (db) initFirebaseListener(animeId, "ep_0");
+        initFirestoreListener(animeId, "ep_0");
         document.getElementById("player-modal").style.display = "block";
-        initCanvasAndVideo();
+        updateCanvasSize();
+        shownDanmuIds.clear();
         danmuElements = [];
     }
     
-    // ==================== 用户系统 ====================
+    // ==================== 用户界面 ====================
     function showToast(msg) {
         const toast = document.createElement('div');
         toast.style.cssText = 'position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:white; padding:12px 24px; border-radius:30px; z-index:3000; font-size:14px;';
@@ -771,40 +598,26 @@
         setTimeout(() => toast.remove(), 2000);
     }
     
-    function showCustomDialog(title, message, onConfirm, onCancel) {
-        const dialog = document.createElement('div');
-        dialog.className = 'custom-dialog';
-        dialog.innerHTML = `<div class="dialog-card"><div class="dialog-title">${title}</div><div class="dialog-message">${message}</div><div class="dialog-buttons"><button class="dialog-btn cancel" id="dialog-cancel">取消</button><button class="dialog-btn confirm" id="dialog-confirm">确定</button></div></div>`;
-        document.body.appendChild(dialog);
-        document.getElementById('dialog-confirm').onclick = () => { dialog.remove(); if(onConfirm) onConfirm(); };
-        document.getElementById('dialog-cancel').onclick = () => { dialog.remove(); if(onCancel) onCancel(); };
-    }
-    
     document.getElementById("close-player")?.addEventListener("click", () => {
         document.getElementById("player-modal").style.display = "none";
         document.getElementById("player-container").innerHTML = "";
-        if (currentUnsubscribe) { currentUnsubscribe(); currentUnsubscribe = null; }
-        if (videoTimeCheckInterval) { clearInterval(videoTimeCheckInterval); videoTimeCheckInterval = null; }
+        if (currentUnsubscribe) currentUnsubscribe();
+        if (timeCheckInterval) clearInterval(timeCheckInterval);
+        if (currentPlayer && isYouTubeMode) { try { currentPlayer.destroy(); } catch(e) {} }
+        currentPlayer = null;
         currentVideoElement = null;
         danmuElements = [];
+        shownDanmuIds.clear();
     });
     
     document.getElementById("danmu-toggle")?.addEventListener("change", (e) => {
         danmuEnabled = e.target.checked;
         const canvas = document.getElementById('danmu-canvas');
-        if (canvas) {
-            canvas.style.display = danmuEnabled ? 'block' : 'none';
-            if (!danmuEnabled) {
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                danmuElements = [];
-            }
-        }
+        if (canvas) canvas.style.display = danmuEnabled ? 'block' : 'none';
     });
     
     document.getElementById("danmu-speed")?.addEventListener("input", (e) => {
         danmuSpeed = parseInt(e.target.value);
-        const speedNames = ['极慢','慢速','中慢','中速','标准','中快','快速','很快','极快','疯狂'];
         document.getElementById("speed-value").innerText = speedNames[danmuSpeed-1];
     });
     
@@ -821,22 +634,21 @@
         const input = document.getElementById('chat-input');
         const text = input.value.trim();
         if (!text) return;
-        if (await sendMessageToFirebase(text, true)) {
-            input.value = '';
-        }
+        await sendMessage(text, true);
+        input.value = '';
     });
-    
     document.getElementById("send-chat")?.addEventListener("click", async () => {
         const input = document.getElementById('chat-input');
         const text = input.value.trim();
         if (!text) return;
-        await sendMessageToFirebase(text, false);
+        await sendMessage(text, false);
         input.value = '';
     });
-    
     document.getElementById("chat-input")?.addEventListener("keypress", (e) => {
         if (e.key === 'Enter') document.getElementById("send-danmu")?.click();
     });
+    
+    window.addEventListener('resize', updateCanvasSize);
     
     // 导航栏
     (function() {
@@ -856,21 +668,34 @@
     })();
     
     // 签到系统
-    let userData = JSON.parse(localStorage.getItem("animix_user") || '{"points":0,"lastSign":"","name":null,"avatar":"default.png"}');
-    function signDaily() {
+    async function updateUserPointsUI(user) {
+        if (!user || !db) return;
+        try {
+            const doc = await db.collection("users").doc(user.uid).get();
+            const points = doc.exists ? (doc.data().points || 0) : 0;
+            document.getElementById("user-points").innerText = `积分: ${points}`;
+            document.getElementById("point-display").innerText = `当前积分: ${points}`;
+        } catch (error) { console.warn("获取积分失败:", error); }
+    }
+    
+    async function signDaily() {
+        if (!window.currentUser) { showToast("请先登录"); return false; }
+        if (!db) { showToast("数据库连接失败"); return false; }
+        const userRef = db.collection("users").doc(window.currentUser.uid);
         const today = new Date().toDateString();
-        if (userData.lastSign === today) { showToast("今天已经签到过了"); return false; }
-        userData.points += 5;
-        userData.lastSign = today;
-        localStorage.setItem("animix_user", JSON.stringify(userData));
-        document.getElementById("point-display").innerText = `当前积分: ${userData.points}`;
-        if (document.getElementById("user-points")) document.getElementById("user-points").innerText = `积分: ${userData.points}`;
-        showToast("签到成功 +5 point");
-        return true;
+        try {
+            const doc = await userRef.get();
+            if (doc.exists && doc.data().lastSign === today) { showToast("今天已经签到过了"); return false; }
+            const newPoints = (doc.exists ? (doc.data().points || 0) : 0) + 5;
+            await userRef.set({ points: newPoints, lastSign: today }, { merge: true });
+            document.getElementById("point-display").innerText = `当前积分: ${newPoints}`;
+            document.getElementById("user-points").innerText = `积分: ${newPoints}`;
+            showToast("签到成功 +5 point");
+            return true;
+        } catch (error) { showToast("签到失败: " + error.message); return false; }
     }
     document.getElementById("daily-sign-btn")?.addEventListener("click", signDaily);
     
-    // 主题切换
     let themeSwitch = document.getElementById("theme-switch");
     function applyTheme(theme) {
         if (theme === "light") document.body.classList.add("light");
@@ -881,13 +706,11 @@
     themeSwitch?.addEventListener("click", () => applyTheme(document.body.classList.contains("light") ? "dark" : "light"));
     applyTheme(localStorage.getItem("theme") || "dark");
     
-    // 登录模态框
     function showLoginModal() {
         const modal = document.createElement("div");
         modal.className = "modal";
         modal.innerHTML = `<div class="modal-card"><h3>登录 Animix</h3><input id="login-email" placeholder="邮箱"><input id="login-pwd" type="password" placeholder="密码"><div class="modal-btn" id="do-login">登录</div><div class="modal-btn" id="go-register">注册新账号</div><div class="modal-btn" id="close-login">取消</div></div>`;
         document.body.appendChild(modal);
-        
         document.getElementById("do-login").onclick = async () => {
             try {
                 await auth.signInWithEmailAndPassword(document.getElementById("login-email").value, document.getElementById("login-pwd").value);
@@ -895,37 +718,17 @@
                 showToast("登录成功");
             } catch(e) { showToast(e.message); }
         };
-        
         document.getElementById("go-register").onclick = () => {
             modal.innerHTML = `<div class="modal-card"><h3>注册</h3><input id="reg-name" placeholder="称呼"><input id="reg-email" placeholder="邮箱"><input id="reg-pwd" type="password" placeholder="密码"><input id="reg-pwd2" type="password" placeholder="确认密码"><div class="modal-btn" id="do-reg">注册</div><div class="modal-btn" id="back-login">返回</div></div>`;
             document.getElementById("do-reg").onclick = async () => {
-                let name = document.getElementById("reg-name").value;
-                let email = document.getElementById("reg-email").value;
-                let pwd = document.getElementById("reg-pwd").value;
-                let pwd2 = document.getElementById("reg-pwd2").value;
+                let name = document.getElementById("reg-name").value, email = document.getElementById("reg-email").value, pwd = document.getElementById("reg-pwd").value, pwd2 = document.getElementById("reg-pwd2").value;
                 if (pwd !== pwd2) return showToast("密码不一致");
                 try {
                     const cred = await auth.createUserWithEmailAndPassword(email, pwd);
                     await cred.user.updateProfile({ displayName: name });
-                    if (db) {
-                        try {
-                            await db.collection("users").doc(cred.user.uid).set({ 
-                                points: 0, 
-                                displayName: name, 
-                                avatarUrl: "default.png", 
-                                lastSign: "" 
-                            });
-                        } catch(dbError) {
-                            console.warn("Firestore 写入失败:", dbError);
-                        }
-                    }
+                    if (db) await db.collection("users").doc(cred.user.uid).set({ points: 0, lastSign: "", displayName: name, avatarUrl: "default.png" });
                     modal.remove();
-                    showToast("注册成功！请重新登录");
-                    // 刷新用户显示
-                    const user = auth.currentUser;
-                    if (user && user.displayName) {
-                        document.getElementById("user-name").innerText = user.displayName;
-                    }
+                    showToast("注册成功！");
                 } catch(e) { showToast(e.message); }
             };
             document.getElementById("back-login").onclick = () => { modal.remove(); showLoginModal(); };
@@ -940,22 +743,8 @@
             if (user) {
                 document.getElementById("profile-loggedin").style.display = "block";
                 document.getElementById("profile-login-prompt").style.display = "none";
-                // 优先显示 displayName，否则显示邮箱
-                const displayName = user.displayName || user.email?.split('@')[0] || "动漫迷";
-                document.getElementById("user-name").innerText = displayName;
-                if (db) {
-                    try {
-                        const snap = await db.collection("users").doc(user.uid).get();
-                        if (snap.exists) {
-                            document.getElementById("user-points").innerText = `积分: ${snap.data().points || 0}`;
-                            if (snap.data().avatarUrl && snap.data().avatarUrl !== "default.png") {
-                                document.getElementById("user-avatar").src = snap.data().avatarUrl;
-                            }
-                        }
-                    } catch(dbError) {
-                        console.warn("Firestore 读取失败:", dbError);
-                    }
-                }
+                document.getElementById("user-name").innerText = user.displayName || user.email?.split('@')[0] || "动漫迷";
+                await updateUserPointsUI(user);
             } else {
                 document.getElementById("profile-loggedin").style.display = "none";
                 document.getElementById("profile-login-prompt").style.display = "block";
@@ -964,13 +753,13 @@
     }
     
     document.getElementById("logout-btn")?.addEventListener("click", () => {
-        showCustomDialog("退出登录", "确定要退出登录吗？", async () => {
-            if (auth) await auth.signOut();
+        if (confirm("确定要退出登录吗？")) {
+            if (auth) auth.signOut();
             window.currentUser = null;
             document.getElementById("profile-loggedin").style.display = "none";
             document.getElementById("profile-login-prompt").style.display = "block";
             showToast("已退出登录");
-        });
+        }
     });
     
     document.getElementById("feedback-btn")?.addEventListener("click", () => {
@@ -998,7 +787,6 @@
         document.getElementById("close-avatar-modal").onclick = () => modal.remove();
     });
     
-    // 公告
     (async () => {
         const ann = await getAnnouncements();
         const div = document.getElementById("announcements-list");
@@ -1007,7 +795,6 @@
     
     document.getElementById("search-input")?.addEventListener("input", (e) => renderHomePage(e.target.value));
     renderHomePage();
-    
     const faviconImg = document.getElementById("favicon-img");
     if (faviconImg) faviconImg.style.borderRadius = "50%";
 </script>
